@@ -14,13 +14,12 @@ import "../Interfaces/ILendingPool.sol";
 
 contract CentroWallet is ContractCaller{
     //using SafeMath for uint256;
-
+    
+    address store;
     address owner;
     mapping(address => uint256) private deposited;
     address[] private token_addr;
     mapping (address => bool) auth;
-    address store;
-    bool test;
 
     constructor(address _owner, address _store) public {
         owner = _owner;
@@ -86,11 +85,15 @@ contract CentroWallet is ContractCaller{
     function depositMoola(address _from, address _token, uint256 _amt) external payable isMain {
         require(auth[_from], "Unauthorized query.");
         ILendingPool moola = ILendingPool(address(0xAB9eA245B2b5F8069f6e5db8756A41D57C6D1570));
-        IERC20Token token = IERC20Token(_token);
-        uint256 amt = _amt == uint(-1) ? token.balanceOf(address(this)) : _amt;
-        require(amt <= token.balanceOf(address(this)), "Not enough moneys.");
-        token.approve(address(moola), _amt);
-        moola.deposit(_token, _amt, 0);
+        if (_token != Storage(store).getEthAddress()) {
+            IERC20Token token = IERC20Token(_token);
+            require(_amt <= token.balanceOf(address(this)), "Not enough moneys.");
+            token.approve(address(moola), _amt);
+            moola.deposit(_token, _amt, 0);
+
+        } else {
+            moola.deposit.value(_amt)(_token, _amt, 0);
+        }
     }
 
     function callConnector(address _from, address _target, bytes calldata _calldata) external payable returns (bytes memory){
